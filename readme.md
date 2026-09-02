@@ -18,6 +18,16 @@ Steps:
 3. `uv run streamlit run FLUX_ph_dashboard.py` or via docker: `docker compose up`
 
 Streamlit should be exposed on the port `8501` for local testing
+If you do not have `docker compose` you can use:
+
+```
+docker build -t flux-ph .
+
+docker run -p 8501:8501 \
+  -v ./data:/app/data \
+  -v ./resources:/app/resources \
+  flux-ph
+```
 
 ## Configuration Options
 
@@ -32,14 +42,17 @@ which have to be decided at preprocessing time:
 
 Other than that only the paths can be set.
 Please look into the respective scripts if you need to set other than
-the default paths described in Quickstart.
+the default paths used by Quickstart.
 
 The Dashboard itself assumes the created parquet files to be in the `data` directory.
 This cannot be changed. The docker compose automatically mounts the correct paths
 
-## New data despite caching
+## Caching Mechanism
 
-To allow more responsive UI the data is loaded from disk and cached by `streamlit`.
-If `data` is replaced the old files would still be shown in the dashboard,
-so the user would have to actively clear the cache in the top right corner.
-Or the container is restarted after running the `preprocessing.py`
+When a preprocessed files are created a manifest file is written as well.
+This manifest contains the `mtime` values of the input files.
+If the `mtime` of any input file changed, the intermediate files will be recreated.
+If the input files are missing but the output exist, there will be no error.
+
+This allows to change the input data and simply rebuilt the docker or run the
+preprocessing separately, because resources and data are both mounted

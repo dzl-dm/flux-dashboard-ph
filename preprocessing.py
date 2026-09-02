@@ -1,10 +1,58 @@
 import argparse
-import sys
+import json
 from pathlib import Path
 
 import pandas as pd
 
 # Preprocessing
+
+
+def _input_mtimes(input_path_main, input_path_patients, input_path_ATC_mapping):
+    """Return {key: mtime or None} for each input file (None if missing)."""
+    paths = {
+        "main": input_path_main,
+        "patients": input_path_patients,
+        "atc_mapping": input_path_ATC_mapping,
+    }
+    return {
+        key: (Path(path).stat().st_mtime if Path(path).is_file() else None)
+        for key, path in paths.items()
+    }
+
+
+MANIFEST_PATH = "data/manifest.json"
+
+
+def _read_manifest():
+    if not Path(MANIFEST_PATH).is_file():
+        return None
+    try:
+        with open(MANIFEST_PATH) as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def _write_manifest(mtimes):
+    with open(MANIFEST_PATH, "w") as f:
+        json.dump(mtimes, f)
+
+
+def _cache_is_valid(output_paths, current_mtimes, inputs_available):
+    """
+    True if every output file exists and the single manifest.json exists and,
+    when the inputs are actually available, its recorded mtimes match the
+    current ones. If none of the inputs are present, an existing cache is
+    trusted as-is since freshness can't be verified.
+    """
+    if not all(Path(output_path).is_file() for output_path in output_paths):
+        return False
+    recorded = _read_manifest()
+    if recorded is None:
+        return False
+    if inputs_available and recorded != current_mtimes:
+        return False
+    return True
 
 
 def process_data(
@@ -13,6 +61,7 @@ def process_data(
     input_path_ATC_mapping,
     Visit_cutoff_days=7,
     Baseline_tolerance_days=90,
+    force=False,
 ):
     """
     This function preprocesses medical registry data and derives patient-level,
@@ -33,6 +82,10 @@ def process_data(
 
         Baseline_tolerance_days (int, default=90):
             Time window (± days around diagnosis_date) used to define baseline visits.
+
+        force (bool, default=False):
+            If True, always reprocess and overwrite cached output, regardless
+            of input file mtimes.
 
     Outputs:
         df_wide:
@@ -57,6 +110,33 @@ def process_data(
 
     # define time format
     time_format = "%Y-%m-%d"
+
+    output_paths = {
+        "wide": "data/wide.gzip",
+        "params": "data/params.gzip",
+        "med": "data/med.gzip",
+    }
+
+    # --- cache check -----------------------------------------------------
+    current_mtimes = _input_mtimes(
+        input_path_main, input_path_patients, input_path_ATC_mapping
+    )
+    inputs_available = all(v is not None for v in current_mtimes.values())
+
+    if not force and _cache_is_valid(
+        output_paths.values(), current_mtimes, inputs_available
+    ):
+        df_wide = pd.read_parquet(output_paths["wide"])
+        df_params = pd.read_parquet(output_paths["params"])
+        df_med = pd.read_parquet(output_paths["med"])
+        return df_wide, df_params, df_med
+
+    if not inputs_available:
+        missing = [key for key, mtime in current_mtimes.items() if mtime is None]
+        raise FileNotFoundError(
+            "Input file(s) missing and no valid cached output available: " f"{missing}"
+        )
+    # -----------------------------------------------------------------------
 
     # data load
     df_main = pd.read_csv(input_path_main)
@@ -478,9 +558,12 @@ def process_data(
     )
 
     Path("data").mkdir(parents=True, exist_ok=True)
-    df_wide.to_parquet("data/wide.gzip", compression="gzip")
-    df_params.to_parquet("data/params.gzip", compression="gzip")
-    df_med.to_parquet("data/med.gzip", compression="gzip")
+    df_wide.to_parquet(output_paths["wide"], compression="gzip")
+    df_params.to_parquet(output_paths["params"], compression="gzip")
+    df_med.to_parquet(output_paths["med"], compression="gzip")
+
+    # record the input mtimes used, so the next run can decide to reuse this cache
+    _write_manifest(current_mtimes)
 
     return df_wide, df_params, df_med
 
@@ -514,18 +597,26 @@ def main():
         default=90,
         help="Baseline tolerance in days (default: %(default)s)",
     )
+    p.add_argument(
+        "--force",
+        action="store_true",
+        help="Always reprocess and overwrite cached output, ignoring mtimes.",
+    )
     args = p.parse_args()
-    not_found = False
-    for p in (
-        args.input_path_main,
-        args.input_path_patients,
-        args.input_path_atc_mapping,
-    ):
-        if not Path(p).is_file():
-            print(f"file not found: {p}")
-            not_found = True
-    if not_found:
-        sys.exit(1)
+
+    # Missing input files are only fatal if there's no valid cache to fall
+    # back on; process_data() makes that call, so just warn here.
+    missing = [
+        path
+        for path in (
+            args.input_path_main,
+            args.input_path_patients,
+            args.input_path_atc_mapping,
+        )
+        if not Path(path).is_file()
+    ]
+    if missing:
+        print(f"input file(s) not found, will try cached output: {missing}")
 
     process_data(
         input_path_main=args.input_path_main,
@@ -533,6 +624,7 @@ def main():
         input_path_ATC_mapping=args.input_path_atc_mapping,
         Visit_cutoff_days=args.visit_cutoff_days,
         Baseline_tolerance_days=args.baseline_tolerance_days,
+        force=args.force,
     )
 
 
