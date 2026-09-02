@@ -582,8 +582,6 @@ with tab1:
 
     st.subheader("Catherizations per patient")
 
-    # st.write("The following chart displays the distribution of follow-up catherizations. This means the first RHC is always in the baseline visit.")
-
     patients_with_baseline = df_wide_filtered.loc[
         df_wide_filtered["visit_id"].str.endswith("BASELINE"), "patient_id"
     ].unique()

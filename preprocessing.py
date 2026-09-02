@@ -150,12 +150,6 @@ def process_data(
     pattern = r"^PH18:\d"
     df_params = df_main[df_main["code"].str.match(pattern)]
 
-    # #---------------------------- test code for multiple diagnosis per patient (to be deleted) ---
-    #     df_sample = df_params.sample(frac=0.1, random_state=42)
-    #     df_sample["code"] = "PH18:6.6.6"
-    #     df_params = pd.concat([df_params, df_sample], ignore_index=True)
-    # #---------------------------------------------------------------------------------------------
-
     # identify patients with multiple PH diagnoses and assign "PH18:9" as code for those patients
     counts = df_params["patient_id"].value_counts()
     multi_ids = counts[counts > 1].index
@@ -253,22 +247,6 @@ def process_data(
     ## df_wide visit_data (LOINC-Codes, visit_start, visit_end)
 
     # define relevant parameters for each measurement method
-    # param_lab = [
-    # "L:33762-6","L:2324-2","L:14933-6","L:718-7","L:14798-3",
-    # "L:1988-5","L:14682-9","L:1742-6","L:1920-8","L:1975-2",
-    # "L:2951-2","L:2885-2","L:1751-7","L:92891-1","L:6690-2",
-    # "L:777-3","L:6768-6","L:77147-7"
-    # ]
-
-    # param_rhc = [
-    #     "L:8414-5","L:94123-7","L:75994-4",
-    #     "L:60985-9","L:8828-6","L:8760-1","L:8761-9"
-    # ]
-
-    # param_pft = [
-    #     "L:20150-9","L:20152-5","L:19868-9",
-    #     "L:19872-1","L:89085-5","L:98130-8"
-    # ]
 
     param_lab = ["L:718-7"]
     param_pft = ["L:20150-9", "L:19866-3"]
@@ -346,10 +324,6 @@ def process_data(
     )
 
     # # flag the visits for each of the measurement methods
-    # df_wide["visitw_lab"] = df_wide[param_lab].notna().all(axis=1).map({True: 1, False: np.nan})
-    # df_wide["visitw_rhc"] = df_wide[param_rhc].notna().all(axis=1).map({True: 1, False: np.nan})
-    # df_wide["visitw_pft"] = df_wide[param_pft].notna().all(axis=1).map({True: 1, False: np.nan})
-    # df_wide["visitw_echo"] = df_wide[param_echo].notna().all(axis=1).map({True: 1, False: np.nan})
 
     # Compute earliest start per visit
     earliest_start = (
