@@ -4,30 +4,36 @@ This dashboard visualizes the most import KPIs of the PH register.
 
 ## Quickstart
 
-Preliminaries:
-
-- Put `observations.csv` and `patients.csv` of the PH register into
+Preliminary: Put `observations.csv` and `patients.csv` of the PH register into
 the `resources` directory.
-- Install `uv` (`pip` also works but has no explicit instructions).
-- Optionally: install docker
+
+Then the quickstart assumes the default paths and exposes the dashboard on
+the port 8501
+
+### Python / uv
+
+Install `uv` (`pip` also works but has no explicit instructions).
 
 Steps:
 
 1. `uv sync`
 2. `uv run preprocessing.py`
-3. `uv run streamlit run FLUX_ph_dashboard.py` or via docker: `docker compose up`
+3. `uv run streamlit run FLUX_ph_dashboard.py`
 
-Streamlit should be exposed on the port `8501` for local testing
-If you do not have `docker compose` you can use:
+### Docker
 
-```
-docker build -t flux-ph .
+Install docker
 
-docker run -p 8501:8501 \
-  -v ./data:/app/data \
-  -v ./resources:/app/resources \
-  flux-ph
-```
+Steps:
+
+1. `docker compose up`
+
+Or alternatively without `compose`:
+
+Steps:
+
+1. `docker build -t flux-ph .`
+2. `docker run -p 8501:8501  -v ./data:/app/data  -v ./resources:/app/resources flux-ph`
 
 ## Configuration Options
 
