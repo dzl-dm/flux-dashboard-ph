@@ -457,16 +457,11 @@ def process_data(
         df_wide["visit_start"].dt.year - df_wide["diagnosis_date"].dt.year
     ) * 12 + (df_wide["visit_start"].dt.month - df_wide["diagnosis_date"].dt.month)
 
-    for col in [
-        "birthdate",
-        "deceaseddate",
-        "diagnosis_date",
-        "visit_start",
-        "visit_end",
-        "diagnosis_date",
-    ]:
-        df_params[col] = pd.to_datetime(df_params[col], format=time_format)
+    for col in ["birthdate", "deceaseddate", "diagnosis_date"]:
+        df_params[col] = pd.to_datetime(df_params[col], format=time_format).dt.date
 
+    for col in ["visit_start", "visit_end", "diagnosis_date"]:
+        df_wide[col] = pd.to_datetime(df_wide[col], format=time_format).dt.date
     # identify patients with a baseline visit
     patients_with_baseline = df_wide.loc[
         df_wide["visit_id"].str.endswith("BASELINE"), "patient_id"
