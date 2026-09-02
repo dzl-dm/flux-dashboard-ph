@@ -280,11 +280,12 @@ if threshold_activator:
     min_val = float(df_wide["diagnosis_gap_months"].min())
     max_val = float(df_wide["diagnosis_gap_months"].max())
 
-    # initialize session state
+    # initialize session state once
     if "gap_range" not in st.session_state:
         st.session_state.gap_range = (min_val, max_val)
+        st.session_state.min_gap, st.session_state.max_gap = min_val, max_val
+        st.session_state.slider_range = (min_val, max_val)
 
-    # callback functions
     def update_from_slider():
         st.session_state.min_gap, st.session_state.max_gap = (
             st.session_state.slider_range
@@ -294,45 +295,35 @@ if threshold_activator:
     def update_from_inputs():
         min_gap = st.session_state.min_gap
         max_gap = st.session_state.max_gap
-
         if min_gap > max_gap:
             st.warning("Invalid range: Min > Max", icon="⚠️")
-            # st.stop()
-
         st.session_state.gap_range = (min_gap, max_gap)
         st.session_state.slider_range = (min_gap, max_gap)
 
-    # two-sided slider
     st.sidebar.slider(
         "follow-up range (months)",
         min_value=min_val,
         max_value=max_val,
-        value=st.session_state.gap_range,
         step=1.0,
         key="slider_range",
         on_change=update_from_slider,
     )
 
     col1, col2 = st.sidebar.columns(2)
-
-    # input boxes
     with col1:
         st.number_input(
             "Minimum months",
             min_value=min_val,
             max_value=max_val,
-            value=st.session_state.gap_range[0],
             step=1.0,
             key="min_gap",
             on_change=update_from_inputs,
         )
-
     with col2:
         st.number_input(
             "Maximum months",
             min_value=min_val,
             max_value=max_val,
-            value=st.session_state.gap_range[1],
             step=1.0,
             key="max_gap",
             on_change=update_from_inputs,
