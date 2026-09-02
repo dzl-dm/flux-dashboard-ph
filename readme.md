@@ -1,0 +1,45 @@
+# FLUX: PH - Dashboard
+
+This dashboard visualizes the most import KPIs of the PH register.
+
+## Quickstart
+
+Preliminaries:
+
+- Put `observations.csv` and `patients.csv` of the PH register into
+the `resources` directory.
+- Install `uv` (`pip` also works but has no explicit instructions).
+- Optionally: install docker
+
+Steps:
+
+1. `uv sync`
+2. `uv run preprocessing.py`
+3. `uv run streamlit run FLUX_ph_dashboard.py` or via docker: `docker compose up`
+
+Streamlit should be exposed on the port `8501` for local testing
+
+## Configuration Options
+
+There are only two meaningful options,
+which have to be decided at preprocessing time:
+
+- `--visit-cutoff-days`
+  The maximum allowed gap (in days) between consecutive events
+  for them to be grouped into the same visit
+- `--baseline-tolerance-days`  
+  Time window (± days around diagnosis_date) used to define baseline visits.
+
+Other than that only the paths can be set.
+Please look into the respective scripts if you need to set other than
+the default paths described in Quickstart.
+
+The Dashboard itself assumes the created parquet files to be in the `data` directory.
+This cannot be changed. The docker compose automatically mounts the correct paths
+
+## New data despite caching
+
+To allow more responsive UI the data is loaded from disk and cached by `streamlit`.
+If `data` is replaced the old files would still be shown in the dashboard,
+so the user would have to actively clear the cache in the top right corner.
+Or the container is restarted after running the `preprocessing.py`
