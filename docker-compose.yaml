@@ -1,0 +1,11 @@
+name: flux-ph
+
+services:
+  dashboard:
+    build: .
+    image: flux-ph
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data
+      - ./resources/:/app/resources:ro

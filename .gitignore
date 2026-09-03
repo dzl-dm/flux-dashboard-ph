@@ -1,0 +1,3 @@
+/resources/*
+!/resources/atc_mapping.csv
+/data
