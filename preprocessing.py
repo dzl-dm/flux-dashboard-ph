@@ -454,8 +454,8 @@ def process_data(
     )
     # compute diagnosis gap in months
     df_wide["diagnosis_gap_months"] = (
-        df_wide["visit_start"].dt.year - df_wide["diagnosis_date"].dt.year
-    ) * 12 + (df_wide["visit_start"].dt.month - df_wide["diagnosis_date"].dt.month)
+        df_wide["visit_start"] - df_wide["diagnosis_date"]
+    ).dt.days / 30.436875
 
     for col in ["birthdate", "deceaseddate", "diagnosis_date"]:
         df_params[col] = pd.to_datetime(df_params[col], format=time_format).dt.date

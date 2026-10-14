@@ -93,11 +93,12 @@ selected_gender = st.sidebar.multiselect(
 
 # 3.2.2 maximum follow-up time filter
 max_gap = int(df_params["max_diagnosis_gap_months"].max())
+min_gap = int(df_params["max_diagnosis_gap_months"].min())
 gap_range = st.sidebar.slider(
     "Select maximum follow-up time (months)",
-    min_value=0,
+    min_value=min_gap,
     max_value=max_gap,
-    value=(0, max_gap),
+    value=(min_gap, max_gap),
     help="Filter patients based on their maximum follow-up time",
 )
 
@@ -120,7 +121,7 @@ if age_range != (min_age, max_age):
         & (filtered_df_params["age_at_diagnosis"] <= age_range[1])
     ]
 
-if gap_range != (0.0, max_gap):
+if gap_range != (min_gap, max_gap):
     filtered_df_params = filtered_df_params[
         (filtered_df_params["max_diagnosis_gap_months"] >= gap_range[0])
         & (filtered_df_params["max_diagnosis_gap_months"] <= gap_range[1])
