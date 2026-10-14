@@ -356,26 +356,28 @@ if threshold or selected_columns:
         filtered_df_params["patient_id"].isin(df_wide_filtered["patient_id"])
     ]
 
-# crossfiltering df_params with df_diag and df_wide
+# runs once per browser session, which is fine
+if st.session_state.get("orphans_checked") is None:
+    # warn if visit/medication rows have no matching patient in df_params
+    # should never happen as far as i am aware
+    st.session_state.orphans_checked = True
+    orphans = (set(df_wide["patient_id"]) | set(df_diag["patient_id"])) - set(
+        df_params["patient_id"]
+    )
+    if orphans:
+        st.toast(
+            f"{len(orphans)} patient(s) in visit/medication data are not in the patient table and are excluded.",
+            icon="⚠️",
+        )
 
-if (
-    year_range != (min_year, max_year)
-    or age_range != (min_age, max_age)
-    or gap_range != (0.0, max_gap)
-    or len(selected_codes) != 0
-    or selected_status
-    or selected_gender
-    or selected_baseline == "Baseline is only visit"
-    or selected_baseline == "Baseline visit available"
-    or selected_baseline == "No Baseline visit available"
-):
-    df_med_filtered = df_med_filtered[
-        df_med_filtered["patient_id"].isin(filtered_df_params["patient_id"])
-    ]
 
-    df_wide_filtered = df_wide_filtered[
-        df_wide_filtered["patient_id"].isin(filtered_df_params["patient_id"])
-    ]
+df_med_filtered = df_med_filtered[
+    df_med_filtered["patient_id"].isin(filtered_df_params["patient_id"])
+]
+
+df_wide_filtered = df_wide_filtered[
+    df_wide_filtered["patient_id"].isin(filtered_df_params["patient_id"])
+]
 
 # crossfiltering df_diag with df_params and df_wide
 
