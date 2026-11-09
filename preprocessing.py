@@ -33,12 +33,12 @@ def _read_manifest():
         return None
 
 
-def _write_manifest(mtimes):
+def _write_manifest(state):
     with open(MANIFEST_PATH, "w") as f:
-        json.dump(mtimes, f)
+        json.dump(state, f)
 
 
-def _cache_is_valid(output_paths, current_mtimes, inputs_available):
+def _cache_is_valid(output_paths, current_state, inputs_available):
     """
     True if every output file exists and the single manifest.json exists and,
     when the inputs are actually available, its recorded mtimes match the
@@ -50,17 +50,15 @@ def _cache_is_valid(output_paths, current_mtimes, inputs_available):
     recorded = _read_manifest()
     if recorded is None:
         return False
-    if inputs_available and recorded != current_mtimes:
-        return False
-    return True
+    return not (inputs_available and recorded != current_state)
 
 
 def process_data(
     input_path_main,
     input_path_patients,
     input_path_ATC_mapping,
-    Visit_cutoff_days=7,
-    Baseline_tolerance_days=90,
+    visit_cutoff_days=7,
+    baseline_tolerance_days=90,
     force=False,
 ):
     """
@@ -76,11 +74,11 @@ def process_data(
             Path to patient-level dataset. Must be in .csv-format. Must contain:
             ['patient_id', 'birthdate', 'deceaseddate'].
 
-        Visit_cutoff_days (int, default=7):
+        visit_cutoff_days (int, default=7):
             Maximum allowed gap (in days) between consecutive events for them
             to be grouped into the same visit.
 
-        Baseline_tolerance_days (int, default=90):
+        baseline_tolerance_days (int, default=90):
             Time window (± days around diagnosis_date) used to define baseline visits.
 
         force (bool, default=False):
@@ -121,11 +119,14 @@ def process_data(
     current_mtimes = _input_mtimes(
         input_path_main, input_path_patients, input_path_ATC_mapping
     )
+    state = current_mtimes | {
+        "visit_cutoff_days": visit_cutoff_days,
+        "baseline_tolerance_days": baseline_tolerance_days,
+    }
+
     inputs_available = all(v is not None for v in current_mtimes.values())
 
-    if not force and _cache_is_valid(
-        output_paths.values(), current_mtimes, inputs_available
-    ):
+    if not force and _cache_is_valid(output_paths.values(), state, inputs_available):
         df_wide = pd.read_parquet(output_paths["wide"])
         df_params = pd.read_parquet(output_paths["params"])
         df_med = pd.read_parquet(output_paths["med"])
@@ -280,7 +281,7 @@ def process_data(
         for _, row in group.iterrows():
             new_visit = False
             # 1. no prior visit for this patient
-            if prev_date is None or (row["start"] - prev_date).days > Visit_cutoff_days:
+            if prev_date is None or (row["start"] - prev_date).days > visit_cutoff_days:
                 new_visit = True
 
             if new_visit:
@@ -359,10 +360,10 @@ def process_data(
     # flag for baseline visit (if the diagnosis is *Baseline_tolerance_days* days: before the "visit_start" OR within "visit_start" and "visit_end" OR after "visit_end")
     df_wide["baseline_flag"] = (
         df_wide["diagnosis_date"]
-        >= df_wide["visit_start"] - pd.Timedelta(days=Baseline_tolerance_days)
+        >= df_wide["visit_start"] - pd.Timedelta(days=baseline_tolerance_days)
     ) & (
         df_wide["diagnosis_date"]
-        <= df_wide["visit_end"] + pd.Timedelta(days=Baseline_tolerance_days)
+        <= df_wide["visit_end"] + pd.Timedelta(days=baseline_tolerance_days)
     )
 
     # flag the visits for each of the measurement methods
@@ -521,7 +522,7 @@ def process_data(
     df_med.to_parquet(output_paths["med"], compression="gzip")
 
     # record the input mtimes used, so the next run can decide to reuse this cache
-    _write_manifest(current_mtimes)
+    _write_manifest(state)
 
     return df_wide, df_params, df_med
 
@@ -580,8 +581,8 @@ def main():
         input_path_main=args.input_path_main,
         input_path_patients=args.input_path_patients,
         input_path_ATC_mapping=args.input_path_atc_mapping,
-        Visit_cutoff_days=args.visit_cutoff_days,
-        Baseline_tolerance_days=args.baseline_tolerance_days,
+        visit_cutoff_days=args.visit_cutoff_days,
+        baseline_tolerance_days=args.baseline_tolerance_days,
         force=args.force,
     )
 
