@@ -1,6 +1,7 @@
 # 1. Imports
 
 from datetime import datetime
+from math import ceil, floor
 
 import pandas as pd
 import plotly.express as px
@@ -43,8 +44,14 @@ st.sidebar.header("Filters")
 st.sidebar.subheader("Diagnosis filters")
 
 # 3.1 Diagnosis year filter
-min_year = int(df_params["diagnosis_year"].min())
-max_year = int(df_params["diagnosis_year"].max())
+
+
+def round_away_from_zero(x: float) -> int:
+    return ceil(x) if x >= 0 else floor(x)
+
+
+min_year = round_away_from_zero(df_params["diagnosis_year"].min())
+max_year = round_away_from_zero(df_params["diagnosis_year"].max())
 year_range = st.sidebar.slider(
     "Select diagnosis years",
     min_value=min_year,
@@ -53,8 +60,8 @@ year_range = st.sidebar.slider(
 )
 
 # 3.2 Age at diagnosis filter
-min_age = int(df_params["age_at_diagnosis"].min())
-max_age = int(df_params["age_at_diagnosis"].max())
+min_age = round_away_from_zero(df_params["age_at_diagnosis"].min())
+max_age = round_away_from_zero(df_params["age_at_diagnosis"].max())
 age_range = st.sidebar.slider(
     "Select age at diagnosis range",
     min_value=min_age,
@@ -92,12 +99,13 @@ selected_gender = st.sidebar.multiselect(
 )
 
 # 3.2.2 maximum follow-up time filter
-max_gap = int(df_params["max_diagnosis_gap_months"].max())
+max_gap = round_away_from_zero(df_params["max_diagnosis_gap_months"].max())
+min_gap = round_away_from_zero(df_params["max_diagnosis_gap_months"].min())
 gap_range = st.sidebar.slider(
     "Select maximum follow-up time (months)",
-    min_value=0,
+    min_value=min_gap,
     max_value=max_gap,
-    value=(0, max_gap),
+    value=(min_gap, max_gap),
     help="Filter patients based on their maximum follow-up time",
 )
 
@@ -120,7 +128,7 @@ if age_range != (min_age, max_age):
         & (filtered_df_params["age_at_diagnosis"] <= age_range[1])
     ]
 
-if gap_range != (0.0, max_gap):
+if gap_range != (min_gap, max_gap):
     filtered_df_params = filtered_df_params[
         (filtered_df_params["max_diagnosis_gap_months"] >= gap_range[0])
         & (filtered_df_params["max_diagnosis_gap_months"] <= gap_range[1])
