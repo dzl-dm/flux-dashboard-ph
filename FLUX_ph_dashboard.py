@@ -297,6 +297,7 @@ if threshold_activator:
         max_gap = st.session_state.max_gap
         if min_gap > max_gap:
             st.warning("Invalid range: Min > Max", icon="⚠️")
+            return
         st.session_state.gap_range = (min_gap, max_gap)
         st.session_state.slider_range = (min_gap, max_gap)
 
@@ -314,7 +315,7 @@ if threshold_activator:
         st.number_input(
             "Minimum months",
             min_value=min_val,
-            max_value=max_val,
+            max_value=st.session_state.get("max_gap", max_val),
             step=1.0,
             key="min_gap",
             on_change=update_from_inputs,
@@ -322,7 +323,7 @@ if threshold_activator:
     with col2:
         st.number_input(
             "Maximum months",
-            min_value=min_val,
+            min_value=st.session_state.get("min_gap", min_val),
             max_value=max_val,
             step=1.0,
             key="max_gap",
@@ -333,6 +334,7 @@ if threshold_activator:
 
 else:
     threshold = None
+    st.session_state.pop("gap_range", None)
 
 if selected_columns is not None and len(selected_columns) > 0:
     df_wide_filtered = df_wide_filtered[
